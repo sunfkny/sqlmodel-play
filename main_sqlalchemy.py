@@ -2,12 +2,8 @@ import dataclasses
 import json
 from typing import TYPE_CHECKING
 
-from sqlalchemy import (
-    ForeignKey,
-    create_engine,
-    func,
-    select,
-)
+import sqlalchemy as sa
+from sqlalchemy import ForeignKey, create_engine, func, select
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -124,9 +120,8 @@ if __name__ == "__main__":
             ).options(
                 joinedload(Hero.team),
             )
-        ).all()
-        for row in result:
-            hero, *_ = row._t
+        ).scalars()
+        for hero in result:
             print(hero.name, hero.team.name)
 
     with Session() as session:
@@ -137,9 +132,8 @@ if __name__ == "__main__":
             ).options(
                 selectinload(Team.heroes),
             )
-        ).all()
-        for row in result:
-            team, *_ = row._t
+        ).scalars()
+        for team in result:
             print(team, team.heroes)
 
     with Session() as session:
@@ -156,7 +150,16 @@ if __name__ == "__main__":
             )
             .join(Hero, full=True)
             .group_by(Team.id)
-        ).all()
-        for row in result:
-            team, *_ = row._t
+        ).scalars()
+        for team in result:
             print(team, team.hero_count)
+
+    with Session() as session:
+        print("=" * 80)
+
+        whereclause = sa.true()
+        whereclause &= Hero.age < 30
+        whereclause &= Hero.name.like("%man%")
+        result = session.execute(select(Hero).where(whereclause)).scalars()
+        for hero in result:
+            print(hero.name, hero.secret_name, hero.age)
